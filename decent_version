@@ -1,0 +1,1180 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "gpuType": "T4",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    },
+    "accelerator": "GPU"
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/YassGan/3DGaussianSplatting-INRIA-Method-Colab/blob/feat%2Fworking_with_drive_ds/decent_version\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Making sure that we are using a GPU"
+      ],
+      "metadata": {
+        "id": "9L20fNcJmfxV"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!nvidia-smi"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "vD-dM5_ounfm",
+        "outputId": "0784895d-9f68-45cd-837a-570246cda88f"
+      },
+      "execution_count": 1,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Thu Mar  6 00:25:29 2025       \n",
+            "+-----------------------------------------------------------------------------------------+\n",
+            "| NVIDIA-SMI 550.54.15              Driver Version: 550.54.15      CUDA Version: 12.4     |\n",
+            "|-----------------------------------------+------------------------+----------------------+\n",
+            "| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n",
+            "| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n",
+            "|                                         |                        |               MIG M. |\n",
+            "|=========================================+========================+======================|\n",
+            "|   0  Tesla T4                       Off |   00000000:00:04.0 Off |                    0 |\n",
+            "| N/A   47C    P8             11W /   70W |       0MiB /  15360MiB |      0%      Default |\n",
+            "|                                         |                        |                  N/A |\n",
+            "+-----------------------------------------+------------------------+----------------------+\n",
+            "                                                                                         \n",
+            "+-----------------------------------------------------------------------------------------+\n",
+            "| Processes:                                                                              |\n",
+            "|  GPU   GI   CI        PID   Type   Process name                              GPU Memory |\n",
+            "|        ID   ID                                                               Usage      |\n",
+            "|=========================================================================================|\n",
+            "|  No running processes found                                                             |\n",
+            "+-----------------------------------------------------------------------------------------+\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Inputting the zip file name (should be located in the drive) of the images which we want to create a 3d scene from"
+      ],
+      "metadata": {
+        "id": "BxrnssWj053-"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "images_zip_file_name=\"RAW_Images\""
+      ],
+      "metadata": {
+        "id": "WlPdqym10uwA"
+      },
+      "execution_count": 2,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Installing pycolmap and colmap before any other installation or modificattion"
+      ],
+      "metadata": {
+        "id": "dz1WNbHWn4vr"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Install COLMAP in Colab\n",
+        "print(\"Installing COLMAP...\")\n",
+        "!apt-get install -y colmap\n",
+        "!pip install pycolmap"
+      ],
+      "metadata": {
+        "id": "8DKag3-Oq0VJ",
+        "outputId": "df00980b-939e-42c0-c30a-af1f7d8debc2",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        }
+      },
+      "execution_count": 3,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Installing COLMAP...\n",
+            "Reading package lists... Done\n",
+            "Building dependency tree... Done\n",
+            "Reading state information... Done\n",
+            "The following additional packages will be installed:\n",
+            "  libamd2 libcamd2 libccolamd2 libceres2 libcholmod3 libcolamd2 libcxsparse3 libevdev2\n",
+            "  libfreeimage3 libgflags2.2 libgoogle-glog0v5 libgudev-1.0-0 libinput-bin libinput10 libjxr0\n",
+            "  libmd4c0 libmetis5 libmtdev1 libqt5core5a libqt5dbus5 libqt5gui5 libqt5network5 libqt5svg5\n",
+            "  libqt5widgets5 libraw20 libspqr2 libsuitesparseconfig5 libwacom-bin libwacom-common libwacom9\n",
+            "  libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-util1 libxcb-xinerama0\n",
+            "  libxcb-xinput0 libxcb-xkb1 libxkbcommon-x11-0 qt5-gtk-platformtheme qttranslations5-l10n\n",
+            "Suggested packages:\n",
+            "  qt5-image-formats-plugins qtwayland5\n",
+            "The following NEW packages will be installed:\n",
+            "  colmap libamd2 libcamd2 libccolamd2 libceres2 libcholmod3 libcolamd2 libcxsparse3 libevdev2\n",
+            "  libfreeimage3 libgflags2.2 libgoogle-glog0v5 libgudev-1.0-0 libinput-bin libinput10 libjxr0\n",
+            "  libmd4c0 libmetis5 libmtdev1 libqt5core5a libqt5dbus5 libqt5gui5 libqt5network5 libqt5svg5\n",
+            "  libqt5widgets5 libraw20 libspqr2 libsuitesparseconfig5 libwacom-bin libwacom-common libwacom9\n",
+            "  libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-util1 libxcb-xinerama0\n",
+            "  libxcb-xinput0 libxcb-xkb1 libxkbcommon-x11-0 qt5-gtk-platformtheme qttranslations5-l10n\n",
+            "0 upgraded, 42 newly installed, 0 to remove and 29 not upgraded.\n",
+            "Need to get 17.5 MB of archives.\n",
+            "After this operation, 68.9 MB of additional disk space will be used.\n",
+            "Get:1 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 libqt5core5a amd64 5.15.3+dfsg-2ubuntu0.2 [2,006 kB]\n",
+            "Get:2 http://archive.ubuntu.com/ubuntu jammy/main amd64 libevdev2 amd64 1.12.1+dfsg-1 [39.5 kB]\n",
+            "Get:3 http://archive.ubuntu.com/ubuntu jammy/main amd64 libmtdev1 amd64 1.1.6-1build4 [14.5 kB]\n",
+            "Get:4 http://archive.ubuntu.com/ubuntu jammy/main amd64 libgudev-1.0-0 amd64 1:237-2build1 [16.3 kB]\n",
+            "Get:5 http://archive.ubuntu.com/ubuntu jammy/main amd64 libwacom-common all 2.2.0-1 [54.3 kB]\n",
+            "Get:6 http://archive.ubuntu.com/ubuntu jammy/main amd64 libwacom9 amd64 2.2.0-1 [22.0 kB]\n",
+            "Get:7 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libinput-bin amd64 1.20.0-1ubuntu0.3 [19.9 kB]\n",
+            "Get:8 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libinput10 amd64 1.20.0-1ubuntu0.3 [131 kB]\n",
+            "Get:9 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libmd4c0 amd64 0.4.8-1 [42.0 kB]\n",
+            "Get:10 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 libqt5dbus5 amd64 5.15.3+dfsg-2ubuntu0.2 [222 kB]\n",
+            "Get:11 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 libqt5network5 amd64 5.15.3+dfsg-2ubuntu0.2 [731 kB]\n",
+            "Get:12 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-icccm4 amd64 0.4.1-1.1build2 [11.5 kB]\n",
+            "Get:13 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-util1 amd64 0.4.0-1build2 [11.4 kB]\n",
+            "Get:14 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-image0 amd64 0.4.0-2 [11.5 kB]\n",
+            "Get:15 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-keysyms1 amd64 0.4.0-1build3 [8,746 B]\n",
+            "Get:16 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-render-util0 amd64 0.3.9-1build3 [10.3 kB]\n",
+            "Get:17 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-xinerama0 amd64 1.14-3ubuntu3 [5,414 B]\n",
+            "Get:18 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-xinput0 amd64 1.14-3ubuntu3 [34.3 kB]\n",
+            "Get:19 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxcb-xkb1 amd64 1.14-3ubuntu3 [32.8 kB]\n",
+            "Get:20 http://archive.ubuntu.com/ubuntu jammy/main amd64 libxkbcommon-x11-0 amd64 1.4.0-1 [14.4 kB]\n",
+            "Get:21 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 libqt5gui5 amd64 5.15.3+dfsg-2ubuntu0.2 [3,722 kB]\n",
+            "Get:22 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 libqt5widgets5 amd64 5.15.3+dfsg-2ubuntu0.2 [2,561 kB]\n",
+            "Get:23 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libqt5svg5 amd64 5.15.3-1 [149 kB]\n",
+            "Get:24 http://archive.ubuntu.com/ubuntu jammy/main amd64 libsuitesparseconfig5 amd64 1:5.10.1+dfsg-4build1 [10.4 kB]\n",
+            "Get:25 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libamd2 amd64 1:5.10.1+dfsg-4build1 [21.6 kB]\n",
+            "Get:26 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libcamd2 amd64 1:5.10.1+dfsg-4build1 [23.3 kB]\n",
+            "Get:27 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libccolamd2 amd64 1:5.10.1+dfsg-4build1 [25.2 kB]\n",
+            "Get:28 http://archive.ubuntu.com/ubuntu jammy/main amd64 libcolamd2 amd64 1:5.10.1+dfsg-4build1 [18.0 kB]\n",
+            "Get:29 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libmetis5 amd64 5.1.0.dfsg-7build2 [181 kB]\n",
+            "Get:30 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libcholmod3 amd64 1:5.10.1+dfsg-4build1 [346 kB]\n",
+            "Get:31 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libcxsparse3 amd64 1:5.10.1+dfsg-4build1 [70.8 kB]\n",
+            "Get:32 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libgflags2.2 amd64 2.2.2-2 [78.1 kB]\n",
+            "Get:33 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libgoogle-glog0v5 amd64 0.5.0+really0.4.0-2 [60.3 kB]\n",
+            "Get:34 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libspqr2 amd64 1:5.10.1+dfsg-4build1 [71.6 kB]\n",
+            "Get:35 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libceres2 amd64 2.0.0+dfsg1-5 [834 kB]\n",
+            "Get:36 http://archive.ubuntu.com/ubuntu jammy/universe amd64 libjxr0 amd64 1.2~git20170615.f752187-5 [174 kB]\n",
+            "Get:37 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 libraw20 amd64 0.20.2-2ubuntu2.22.04.1 [342 kB]\n",
+            "Get:38 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 libfreeimage3 amd64 3.18.0+ds2-6ubuntu5.1 [294 kB]\n",
+            "Get:39 http://archive.ubuntu.com/ubuntu jammy/universe amd64 colmap amd64 3.7-2 [2,998 kB]\n",
+            "Get:40 http://archive.ubuntu.com/ubuntu jammy/main amd64 libwacom-bin amd64 2.2.0-1 [13.6 kB]\n",
+            "Get:41 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 qt5-gtk-platformtheme amd64 5.15.3+dfsg-2ubuntu0.2 [130 kB]\n",
+            "Get:42 http://archive.ubuntu.com/ubuntu jammy/universe amd64 qttranslations5-l10n all 5.15.3-1 [1,983 kB]\n",
+            "Fetched 17.5 MB in 4s (4,903 kB/s)\n",
+            "Extracting templates from packages: 100%\n",
+            "Selecting previously unselected package libqt5core5a:amd64.\n",
+            "(Reading database ... 124947 files and directories currently installed.)\n",
+            "Preparing to unpack .../00-libqt5core5a_5.15.3+dfsg-2ubuntu0.2_amd64.deb ...\n",
+            "Unpacking libqt5core5a:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Selecting previously unselected package libevdev2:amd64.\n",
+            "Preparing to unpack .../01-libevdev2_1.12.1+dfsg-1_amd64.deb ...\n",
+            "Unpacking libevdev2:amd64 (1.12.1+dfsg-1) ...\n",
+            "Selecting previously unselected package libmtdev1:amd64.\n",
+            "Preparing to unpack .../02-libmtdev1_1.1.6-1build4_amd64.deb ...\n",
+            "Unpacking libmtdev1:amd64 (1.1.6-1build4) ...\n",
+            "Selecting previously unselected package libgudev-1.0-0:amd64.\n",
+            "Preparing to unpack .../03-libgudev-1.0-0_1%3a237-2build1_amd64.deb ...\n",
+            "Unpacking libgudev-1.0-0:amd64 (1:237-2build1) ...\n",
+            "Selecting previously unselected package libwacom-common.\n",
+            "Preparing to unpack .../04-libwacom-common_2.2.0-1_all.deb ...\n",
+            "Unpacking libwacom-common (2.2.0-1) ...\n",
+            "Selecting previously unselected package libwacom9:amd64.\n",
+            "Preparing to unpack .../05-libwacom9_2.2.0-1_amd64.deb ...\n",
+            "Unpacking libwacom9:amd64 (2.2.0-1) ...\n",
+            "Selecting previously unselected package libinput-bin.\n",
+            "Preparing to unpack .../06-libinput-bin_1.20.0-1ubuntu0.3_amd64.deb ...\n",
+            "Unpacking libinput-bin (1.20.0-1ubuntu0.3) ...\n",
+            "Selecting previously unselected package libinput10:amd64.\n",
+            "Preparing to unpack .../07-libinput10_1.20.0-1ubuntu0.3_amd64.deb ...\n",
+            "Unpacking libinput10:amd64 (1.20.0-1ubuntu0.3) ...\n",
+            "Selecting previously unselected package libmd4c0:amd64.\n",
+            "Preparing to unpack .../08-libmd4c0_0.4.8-1_amd64.deb ...\n",
+            "Unpacking libmd4c0:amd64 (0.4.8-1) ...\n",
+            "Selecting previously unselected package libqt5dbus5:amd64.\n",
+            "Preparing to unpack .../09-libqt5dbus5_5.15.3+dfsg-2ubuntu0.2_amd64.deb ...\n",
+            "Unpacking libqt5dbus5:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Selecting previously unselected package libqt5network5:amd64.\n",
+            "Preparing to unpack .../10-libqt5network5_5.15.3+dfsg-2ubuntu0.2_amd64.deb ...\n",
+            "Unpacking libqt5network5:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Selecting previously unselected package libxcb-icccm4:amd64.\n",
+            "Preparing to unpack .../11-libxcb-icccm4_0.4.1-1.1build2_amd64.deb ...\n",
+            "Unpacking libxcb-icccm4:amd64 (0.4.1-1.1build2) ...\n",
+            "Selecting previously unselected package libxcb-util1:amd64.\n",
+            "Preparing to unpack .../12-libxcb-util1_0.4.0-1build2_amd64.deb ...\n",
+            "Unpacking libxcb-util1:amd64 (0.4.0-1build2) ...\n",
+            "Selecting previously unselected package libxcb-image0:amd64.\n",
+            "Preparing to unpack .../13-libxcb-image0_0.4.0-2_amd64.deb ...\n",
+            "Unpacking libxcb-image0:amd64 (0.4.0-2) ...\n",
+            "Selecting previously unselected package libxcb-keysyms1:amd64.\n",
+            "Preparing to unpack .../14-libxcb-keysyms1_0.4.0-1build3_amd64.deb ...\n",
+            "Unpacking libxcb-keysyms1:amd64 (0.4.0-1build3) ...\n",
+            "Selecting previously unselected package libxcb-render-util0:amd64.\n",
+            "Preparing to unpack .../15-libxcb-render-util0_0.3.9-1build3_amd64.deb ...\n",
+            "Unpacking libxcb-render-util0:amd64 (0.3.9-1build3) ...\n",
+            "Selecting previously unselected package libxcb-xinerama0:amd64.\n",
+            "Preparing to unpack .../16-libxcb-xinerama0_1.14-3ubuntu3_amd64.deb ...\n",
+            "Unpacking libxcb-xinerama0:amd64 (1.14-3ubuntu3) ...\n",
+            "Selecting previously unselected package libxcb-xinput0:amd64.\n",
+            "Preparing to unpack .../17-libxcb-xinput0_1.14-3ubuntu3_amd64.deb ...\n",
+            "Unpacking libxcb-xinput0:amd64 (1.14-3ubuntu3) ...\n",
+            "Selecting previously unselected package libxcb-xkb1:amd64.\n",
+            "Preparing to unpack .../18-libxcb-xkb1_1.14-3ubuntu3_amd64.deb ...\n",
+            "Unpacking libxcb-xkb1:amd64 (1.14-3ubuntu3) ...\n",
+            "Selecting previously unselected package libxkbcommon-x11-0:amd64.\n",
+            "Preparing to unpack .../19-libxkbcommon-x11-0_1.4.0-1_amd64.deb ...\n",
+            "Unpacking libxkbcommon-x11-0:amd64 (1.4.0-1) ...\n",
+            "Selecting previously unselected package libqt5gui5:amd64.\n",
+            "Preparing to unpack .../20-libqt5gui5_5.15.3+dfsg-2ubuntu0.2_amd64.deb ...\n",
+            "Unpacking libqt5gui5:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Selecting previously unselected package libqt5widgets5:amd64.\n",
+            "Preparing to unpack .../21-libqt5widgets5_5.15.3+dfsg-2ubuntu0.2_amd64.deb ...\n",
+            "Unpacking libqt5widgets5:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Selecting previously unselected package libqt5svg5:amd64.\n",
+            "Preparing to unpack .../22-libqt5svg5_5.15.3-1_amd64.deb ...\n",
+            "Unpacking libqt5svg5:amd64 (5.15.3-1) ...\n",
+            "Selecting previously unselected package libsuitesparseconfig5:amd64.\n",
+            "Preparing to unpack .../23-libsuitesparseconfig5_1%3a5.10.1+dfsg-4build1_amd64.deb ...\n",
+            "Unpacking libsuitesparseconfig5:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Selecting previously unselected package libamd2:amd64.\n",
+            "Preparing to unpack .../24-libamd2_1%3a5.10.1+dfsg-4build1_amd64.deb ...\n",
+            "Unpacking libamd2:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Selecting previously unselected package libcamd2:amd64.\n",
+            "Preparing to unpack .../25-libcamd2_1%3a5.10.1+dfsg-4build1_amd64.deb ...\n",
+            "Unpacking libcamd2:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Selecting previously unselected package libccolamd2:amd64.\n",
+            "Preparing to unpack .../26-libccolamd2_1%3a5.10.1+dfsg-4build1_amd64.deb ...\n",
+            "Unpacking libccolamd2:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Selecting previously unselected package libcolamd2:amd64.\n",
+            "Preparing to unpack .../27-libcolamd2_1%3a5.10.1+dfsg-4build1_amd64.deb ...\n",
+            "Unpacking libcolamd2:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Selecting previously unselected package libmetis5:amd64.\n",
+            "Preparing to unpack .../28-libmetis5_5.1.0.dfsg-7build2_amd64.deb ...\n",
+            "Unpacking libmetis5:amd64 (5.1.0.dfsg-7build2) ...\n",
+            "Selecting previously unselected package libcholmod3:amd64.\n",
+            "Preparing to unpack .../29-libcholmod3_1%3a5.10.1+dfsg-4build1_amd64.deb ...\n",
+            "Unpacking libcholmod3:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Selecting previously unselected package libcxsparse3:amd64.\n",
+            "Preparing to unpack .../30-libcxsparse3_1%3a5.10.1+dfsg-4build1_amd64.deb ...\n",
+            "Unpacking libcxsparse3:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Selecting previously unselected package libgflags2.2.\n",
+            "Preparing to unpack .../31-libgflags2.2_2.2.2-2_amd64.deb ...\n",
+            "Unpacking libgflags2.2 (2.2.2-2) ...\n",
+            "Selecting previously unselected package libgoogle-glog0v5.\n",
+            "Preparing to unpack .../32-libgoogle-glog0v5_0.5.0+really0.4.0-2_amd64.deb ...\n",
+            "Unpacking libgoogle-glog0v5 (0.5.0+really0.4.0-2) ...\n",
+            "Selecting previously unselected package libspqr2:amd64.\n",
+            "Preparing to unpack .../33-libspqr2_1%3a5.10.1+dfsg-4build1_amd64.deb ...\n",
+            "Unpacking libspqr2:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Selecting previously unselected package libceres2.\n",
+            "Preparing to unpack .../34-libceres2_2.0.0+dfsg1-5_amd64.deb ...\n",
+            "Unpacking libceres2 (2.0.0+dfsg1-5) ...\n",
+            "Selecting previously unselected package libjxr0:amd64.\n",
+            "Preparing to unpack .../35-libjxr0_1.2~git20170615.f752187-5_amd64.deb ...\n",
+            "Unpacking libjxr0:amd64 (1.2~git20170615.f752187-5) ...\n",
+            "Selecting previously unselected package libraw20:amd64.\n",
+            "Preparing to unpack .../36-libraw20_0.20.2-2ubuntu2.22.04.1_amd64.deb ...\n",
+            "Unpacking libraw20:amd64 (0.20.2-2ubuntu2.22.04.1) ...\n",
+            "Selecting previously unselected package libfreeimage3:amd64.\n",
+            "Preparing to unpack .../37-libfreeimage3_3.18.0+ds2-6ubuntu5.1_amd64.deb ...\n",
+            "Unpacking libfreeimage3:amd64 (3.18.0+ds2-6ubuntu5.1) ...\n",
+            "Selecting previously unselected package colmap.\n",
+            "Preparing to unpack .../38-colmap_3.7-2_amd64.deb ...\n",
+            "Unpacking colmap (3.7-2) ...\n",
+            "Selecting previously unselected package libwacom-bin.\n",
+            "Preparing to unpack .../39-libwacom-bin_2.2.0-1_amd64.deb ...\n",
+            "Unpacking libwacom-bin (2.2.0-1) ...\n",
+            "Selecting previously unselected package qt5-gtk-platformtheme:amd64.\n",
+            "Preparing to unpack .../40-qt5-gtk-platformtheme_5.15.3+dfsg-2ubuntu0.2_amd64.deb ...\n",
+            "Unpacking qt5-gtk-platformtheme:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Selecting previously unselected package qttranslations5-l10n.\n",
+            "Preparing to unpack .../41-qttranslations5-l10n_5.15.3-1_all.deb ...\n",
+            "Unpacking qttranslations5-l10n (5.15.3-1) ...\n",
+            "Setting up libxcb-xinput0:amd64 (1.14-3ubuntu3) ...\n",
+            "Setting up libjxr0:amd64 (1.2~git20170615.f752187-5) ...\n",
+            "Setting up libxcb-keysyms1:amd64 (0.4.0-1build3) ...\n",
+            "Setting up libxcb-render-util0:amd64 (0.3.9-1build3) ...\n",
+            "Setting up libmetis5:amd64 (5.1.0.dfsg-7build2) ...\n",
+            "Setting up libxcb-icccm4:amd64 (0.4.1-1.1build2) ...\n",
+            "Setting up libxcb-util1:amd64 (0.4.0-1build2) ...\n",
+            "Setting up libxcb-xkb1:amd64 (1.14-3ubuntu3) ...\n",
+            "Setting up libxcb-image0:amd64 (0.4.0-2) ...\n",
+            "Setting up libxcb-xinerama0:amd64 (1.14-3ubuntu3) ...\n",
+            "Setting up qttranslations5-l10n (5.15.3-1) ...\n",
+            "Setting up libxkbcommon-x11-0:amd64 (1.4.0-1) ...\n",
+            "Setting up libqt5core5a:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Setting up libraw20:amd64 (0.20.2-2ubuntu2.22.04.1) ...\n",
+            "Setting up libmtdev1:amd64 (1.1.6-1build4) ...\n",
+            "Setting up libqt5dbus5:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Setting up libmd4c0:amd64 (0.4.8-1) ...\n",
+            "Setting up libcxsparse3:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Setting up libevdev2:amd64 (1.12.1+dfsg-1) ...\n",
+            "Setting up libsuitesparseconfig5:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Setting up libgudev-1.0-0:amd64 (1:237-2build1) ...\n",
+            "Setting up libgflags2.2 (2.2.2-2) ...\n",
+            "Setting up libwacom-common (2.2.0-1) ...\n",
+            "Setting up libamd2:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Setting up libfreeimage3:amd64 (3.18.0+ds2-6ubuntu5.1) ...\n",
+            "Setting up libcolamd2:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Setting up libwacom9:amd64 (2.2.0-1) ...\n",
+            "Setting up libqt5network5:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Setting up libinput-bin (1.20.0-1ubuntu0.3) ...\n",
+            "Setting up libcamd2:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Setting up libwacom-bin (2.2.0-1) ...\n",
+            "Setting up libccolamd2:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Setting up libgoogle-glog0v5 (0.5.0+really0.4.0-2) ...\n",
+            "Setting up libcholmod3:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Setting up libinput10:amd64 (1.20.0-1ubuntu0.3) ...\n",
+            "Setting up libspqr2:amd64 (1:5.10.1+dfsg-4build1) ...\n",
+            "Setting up libqt5gui5:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Setting up libqt5widgets5:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Setting up qt5-gtk-platformtheme:amd64 (5.15.3+dfsg-2ubuntu0.2) ...\n",
+            "Setting up libceres2 (2.0.0+dfsg1-5) ...\n",
+            "Setting up colmap (3.7-2) ...\n",
+            "Setting up libqt5svg5:amd64 (5.15.3-1) ...\n",
+            "Processing triggers for mailcap (3.70+nmu1ubuntu1) ...\n",
+            "Processing triggers for libc-bin (2.35-0ubuntu3.8) ...\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libhwloc.so.15 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libtbbbind_2_0.so.3 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libur_loader.so.0 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libtbbbind_2_5.so.3 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libur_adapter_level_zero.so.0 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libtbbbind.so.3 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libur_adapter_opencl.so.0 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libtbb.so.12 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libtbbmalloc_proxy.so.2 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libtbbmalloc.so.2 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libumf.so.0 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libtcm.so.1 is not a symbolic link\n",
+            "\n",
+            "/sbin/ldconfig.real: /usr/local/lib/libtcm_debug.so.1 is not a symbolic link\n",
+            "\n",
+            "Processing triggers for man-db (2.10.2-1) ...\n",
+            "Collecting pycolmap\n",
+            "  Downloading pycolmap-3.11.1-cp311-cp311-manylinux_2_28_x86_64.whl.metadata (10 kB)\n",
+            "Requirement already satisfied: numpy in /usr/local/lib/python3.11/dist-packages (from pycolmap) (1.26.4)\n",
+            "Downloading pycolmap-3.11.1-cp311-cp311-manylinux_2_28_x86_64.whl (12.5 MB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m12.5/12.5 MB\u001b[0m \u001b[31m9.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hInstalling collected packages: pycolmap\n",
+            "Successfully installed pycolmap-3.11.1\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Python downgrading\n"
+      ],
+      "metadata": {
+        "id": "LYiyaKJVzVR5"
+      }
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 4,
+      "metadata": {
+        "id": "bEU8kAEozSnY",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "6c2bf72f-ffa8-4acb-f6d6-c62971dc7e08"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "--2025-03-06 00:25:55--  https://repo.anaconda.com/miniconda/Miniconda3-py37_23.1.0-1-Linux-x86_64.sh\n",
+            "Resolving repo.anaconda.com (repo.anaconda.com)... 104.16.32.241, 104.16.191.158, 2606:4700::6810:bf9e, ...\n",
+            "Connecting to repo.anaconda.com (repo.anaconda.com)|104.16.32.241|:443... connected.\n",
+            "HTTP request sent, awaiting response... 200 OK\n",
+            "Length: 90665082 (86M) [application/x-sh]\n",
+            "Saving to: ‘mini.sh’\n",
+            "\n",
+            "mini.sh             100%[===================>]  86.46M   351MB/s    in 0.2s    \n",
+            "\n",
+            "2025-03-06 00:25:55 (351 MB/s) - ‘mini.sh’ saved [90665082/90665082]\n",
+            "\n",
+            "PREFIX=/usr/local\n",
+            "Unpacking payload ...\n",
+            "                                                                                 \n",
+            "Installing base environment...\n",
+            "\n",
+            "\n",
+            "Downloading and Extracting Packages\n",
+            "\n",
+            "\n",
+            "Downloading and Extracting Packages\n",
+            "\n",
+            "Preparing transaction: - \b\b\\ \b\b| \b\b/ \b\b- \b\b\\ \b\bdone\n",
+            "Executing transaction: / \b\b- \b\b\\ \b\b| \b\b/ \b\b- \b\b\\ \b\b| \b\b/ \b\b- \b\b\\ \b\b| \b\b/ \b\b- \b\b\\ \b\b| \b\b/ \b\b- \b\b\\ \b\b| \b\b/ \b\b- \b\b\\ \b\b| \b\b/ \b\b- \b\b\\ \b\b| \b\b/ \b\b- \b\b\\ \b\bdone\n",
+            "installation finished.\n",
+            "WARNING:\n",
+            "    You currently have a PYTHONPATH environment variable set. This may cause\n",
+            "    unexpected behavior when running the Python interpreter in Miniconda3.\n",
+            "    For best results, please verify that your PYTHONPATH only points to\n",
+            "    directories of packages that are compatible with the Python interpreter\n",
+            "    in Miniconda3: /usr/local\n",
+            "Collecting package metadata (current_repodata.json): ...working... done\n",
+            "Solving environment: ...working... done\n",
+            "\n",
+            "## Package Plan ##\n",
+            "\n",
+            "  environment location: /usr/local\n",
+            "\n",
+            "  added / updated specs:\n",
+            "    - python=3.7\n",
+            "\n",
+            "\n",
+            "The following packages will be downloaded:\n",
+            "\n",
+            "    package                    |            build\n",
+            "    ---------------------------|-----------------\n",
+            "    ca-certificates-2025.2.25  |       h06a4308_0         129 KB\n",
+            "    openssl-1.1.1w             |       h7f8727e_0         3.7 MB\n",
+            "    ------------------------------------------------------------\n",
+            "                                           Total:         3.9 MB\n",
+            "\n",
+            "The following packages will be UPDATED:\n",
+            "\n",
+            "  ca-certificates                     2023.01.10-h06a4308_0 --> 2025.2.25-h06a4308_0 \n",
+            "  openssl                                 1.1.1s-h7f8727e_0 --> 1.1.1w-h7f8727e_0 \n",
+            "\n",
+            "\n",
+            "Preparing transaction: ...working... done\n",
+            "Verifying transaction: ...working... done\n",
+            "Executing transaction: ...working... done\n",
+            "Python 3.7.16\n"
+          ]
+        }
+      ],
+      "source": [
+        "!wget -O mini.sh https://repo.anaconda.com/miniconda/Miniconda3-py37_23.1.0-1-Linux-x86_64.sh\n",
+        "!chmod +x mini.sh\n",
+        "!bash ./mini.sh -b -f -p /usr/local\n",
+        "!conda install -q -y python=3.7\n",
+        "import sys\n",
+        "sys.path.append('/usr/local/lib/python3.7/site-packages')\n",
+        "!python --version  # Should say Python 3.7.x"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# CUDA 11.8"
+      ],
+      "metadata": {
+        "id": "iJvxRlTYzyGE"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!wget https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_520.61.05_linux.run\n",
+        "!chmod +x cuda_11.8.0_520.61.05_linux.run\n",
+        "!./cuda_11.8.0_520.61.05_linux.run --silent --toolkit --no-drm --no-man-page\n",
+        "import os\n",
+        "os.environ['PATH'] += ':/usr/local/cuda-11.8/bin'\n",
+        "os.environ['LD_LIBRARY_PATH'] = '/usr/local/cuda-11.8/lib64:/usr/lib64-nvidia'\n",
+        "!nvcc --version  # Should show CUDA 11.8"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "6V1R_kOfzxck",
+        "outputId": "bd8d0943-4a41-4239-8d1f-0f921716ba96"
+      },
+      "execution_count": 5,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "--2025-03-06 00:26:23--  https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_520.61.05_linux.run\n",
+            "Resolving developer.download.nvidia.com (developer.download.nvidia.com)... 23.213.43.207, 23.213.43.199\n",
+            "Connecting to developer.download.nvidia.com (developer.download.nvidia.com)|23.213.43.207|:443... connected.\n",
+            "HTTP request sent, awaiting response... 200 OK\n",
+            "Length: 4336730777 (4.0G) [application/octet-stream]\n",
+            "Saving to: ‘cuda_11.8.0_520.61.05_linux.run’\n",
+            "\n",
+            "cuda_11.8.0_520.61. 100%[===================>]   4.04G   234MB/s    in 26s     \n",
+            "\n",
+            "2025-03-06 00:26:49 (161 MB/s) - ‘cuda_11.8.0_520.61.05_linux.run’ saved [4336730777/4336730777]\n",
+            "\n",
+            "nvcc: NVIDIA (R) Cuda compiler driver\n",
+            "Copyright (c) 2005-2022 NVIDIA Corporation\n",
+            "Built on Wed_Sep_21_10:33:58_PDT_2022\n",
+            "Cuda compilation tools, release 11.8, V11.8.89\n",
+            "Build cuda_11.8.r11.8/compiler.31833905_0\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "#Pytorch with cuda"
+      ],
+      "metadata": {
+        "id": "5Cfq4AGJzlAI"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!pip uninstall torch torchvision torchaudio -y\n",
+        "!pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/whl/cu116"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "bzg2csQeznWA",
+        "outputId": "d2b3baca-e02b-4ba1-c9fd-63a64d9de99c"
+      },
+      "execution_count": 6,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\u001b[33mWARNING: Skipping torch as it is not installed.\u001b[0m\u001b[33m\n",
+            "\u001b[0m\u001b[33mWARNING: Skipping torchvision as it is not installed.\u001b[0m\u001b[33m\n",
+            "\u001b[0m\u001b[33mWARNING: Skipping torchaudio as it is not installed.\u001b[0m\u001b[33m\n",
+            "\u001b[0mLooking in indexes: https://pypi.org/simple, https://download.pytorch.org/whl/cu116\n",
+            "Collecting torch==1.12.1+cu116\n",
+            "  Downloading https://download.pytorch.org/whl/cu116/torch-1.12.1%2Bcu116-cp37-cp37m-linux_x86_64.whl (1904.8 MB)\n",
+            "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m1.9/1.9 GB\u001b[0m \u001b[31m757.3 kB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hCollecting torchvision==0.13.1+cu116\n",
+            "  Downloading https://download.pytorch.org/whl/cu116/torchvision-0.13.1%2Bcu116-cp37-cp37m-linux_x86_64.whl (23.5 MB)\n",
+            "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m23.5/23.5 MB\u001b[0m \u001b[31m13.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hCollecting torchaudio==0.12.1\n",
+            "  Downloading https://download.pytorch.org/whl/cu116/torchaudio-0.12.1%2Bcu116-cp37-cp37m-linux_x86_64.whl (3.8 MB)\n",
+            "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m3.8/3.8 MB\u001b[0m \u001b[31m62.4 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hRequirement already satisfied: typing-extensions in /usr/local/lib/python3.7/site-packages (from torch==1.12.1+cu116) (4.4.0)\n",
+            "Requirement already satisfied: requests in /usr/local/lib/python3.7/site-packages (from torchvision==0.13.1+cu116) (2.28.1)\n",
+            "Collecting numpy\n",
+            "  Downloading https://download.pytorch.org/whl/numpy-1.21.6-cp37-cp37m-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (15.7 MB)\n",
+            "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m15.7/15.7 MB\u001b[0m \u001b[31m83.5 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hCollecting pillow!=8.3.*,>=5.3.0\n",
+            "  Downloading Pillow-9.5.0-cp37-cp37m-manylinux_2_28_x86_64.whl (3.4 MB)\n",
+            "\u001b[2K     \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m3.4/3.4 MB\u001b[0m \u001b[31m85.0 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hRequirement already satisfied: charset-normalizer<3,>=2 in /usr/local/lib/python3.7/site-packages (from requests->torchvision==0.13.1+cu116) (2.0.4)\n",
+            "Requirement already satisfied: idna<4,>=2.5 in /usr/local/lib/python3.7/site-packages (from requests->torchvision==0.13.1+cu116) (3.4)\n",
+            "Requirement already satisfied: urllib3<1.27,>=1.21.1 in /usr/local/lib/python3.7/site-packages (from requests->torchvision==0.13.1+cu116) (1.26.14)\n",
+            "Requirement already satisfied: certifi>=2017.4.17 in /usr/local/lib/python3.7/site-packages (from requests->torchvision==0.13.1+cu116) (2022.12.7)\n",
+            "Installing collected packages: torch, pillow, numpy, torchvision, torchaudio\n",
+            "Successfully installed numpy-1.21.6 pillow-9.5.0 torch-1.12.1+cu116 torchaudio-0.12.1+cu116 torchvision-0.13.1+cu116\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Verification of the versions"
+      ],
+      "metadata": {
+        "id": "QbskoEIW1kMT"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import torch\n",
+        "print(torch.cuda.is_available())  # Should be True\n",
+        "print(torch.version.cuda)        # Should be 11.3 (from PyTorch)\n",
+        "print(torch.cuda.get_device_name(0))  # Should show GPU"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "T6hplWJp1ncr",
+        "outputId": "889ab36a-98bd-4218-b679-3c849569063b"
+      },
+      "execution_count": 7,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "True\n",
+            "12.4\n",
+            "Tesla T4\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "##making sure that we are always using the GPU and not a CPU\n",
+        "!nvidia-smi"
+      ],
+      "metadata": {
+        "id": "EzxF7zKL2Z5b",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "f01ef288-24fb-4023-e340-a4cec1d394dc"
+      },
+      "execution_count": 8,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Thu Mar  6 00:32:27 2025       \n",
+            "+-----------------------------------------------------------------------------------------+\n",
+            "| NVIDIA-SMI 550.54.15              Driver Version: 550.54.15      CUDA Version: 12.4     |\n",
+            "|-----------------------------------------+------------------------+----------------------+\n",
+            "| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n",
+            "| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n",
+            "|                                         |                        |               MIG M. |\n",
+            "|=========================================+========================+======================|\n",
+            "|   0  Tesla T4                       Off |   00000000:00:04.0 Off |                    0 |\n",
+            "| N/A   43C    P8             11W /   70W |       2MiB /  15360MiB |      0%      Default |\n",
+            "|                                         |                        |                  N/A |\n",
+            "+-----------------------------------------+------------------------+----------------------+\n",
+            "                                                                                         \n",
+            "+-----------------------------------------------------------------------------------------+\n",
+            "| Processes:                                                                              |\n",
+            "|  GPU   GI   CI        PID   Type   Process name                              GPU Memory |\n",
+            "|        ID   ID                                                               Usage      |\n",
+            "|=========================================================================================|\n",
+            "|  No running processes found                                                             |\n",
+            "+-----------------------------------------------------------------------------------------+\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Cloning the 3D Gaussian Splatting algorithm and the submodules of the algorithm"
+      ],
+      "metadata": {
+        "id": "5JG2JjO2oL_F"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "%cd /content\n",
+        "!git clone --recursive https://github.com/camenduru/gaussian-splatting\n",
+        "!pip install -q plyfile\n",
+        "\n",
+        "%cd /content/gaussian-splatting\n",
+        "!pip install -q /content/gaussian-splatting/submodules/diff-gaussian-rasterization\n",
+        "!pip install -q /content/gaussian-splatting/submodules/simple-knn\n"
+      ],
+      "metadata": {
+        "id": "UXpilqZw6qnl",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "1cd96108-017f-4a54-ed55-0b014c277adb"
+      },
+      "execution_count": 9,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "/content\n",
+            "Cloning into 'gaussian-splatting'...\n",
+            "remote: Enumerating objects: 603, done.\u001b[K\n",
+            "remote: Total 603 (delta 0), reused 0 (delta 0), pack-reused 603 (from 1)\u001b[K\n",
+            "Receiving objects: 100% (603/603), 2.09 MiB | 3.07 MiB/s, done.\n",
+            "Resolving deltas: 100% (347/347), done.\n",
+            "Submodule 'SIBR_viewers' (https://gitlab.inria.fr/sibr/sibr_core) registered for path 'SIBR_viewers'\n",
+            "Submodule 'submodules/diff-gaussian-rasterization' (https://github.com/graphdeco-inria/diff-gaussian-rasterization) registered for path 'submodules/diff-gaussian-rasterization'\n",
+            "Submodule 'submodules/simple-knn' (https://gitlab.inria.fr/bkerbl/simple-knn.git) registered for path 'submodules/simple-knn'\n",
+            "Cloning into '/content/gaussian-splatting/SIBR_viewers'...\n",
+            "warning: redirecting to https://gitlab.inria.fr/sibr/sibr_core.git/\n",
+            "remote: Enumerating objects: 3293, done.        \n",
+            "remote: Counting objects: 100% (322/322), done.        \n",
+            "remote: Compressing objects: 100% (174/174), done.        \n",
+            "remote: Total 3293 (delta 171), reused 280 (delta 148), pack-reused 2971 (from 1)        \n",
+            "Receiving objects: 100% (3293/3293), 9.98 MiB | 5.56 MiB/s, done.\n",
+            "Resolving deltas: 100% (2039/2039), done.\n",
+            "Cloning into '/content/gaussian-splatting/submodules/diff-gaussian-rasterization'...\n",
+            "remote: Enumerating objects: 329, done.        \n",
+            "remote: Total 329 (delta 0), reused 0 (delta 0), pack-reused 329 (from 1)        \n",
+            "Receiving objects: 100% (329/329), 111.52 KiB | 18.59 MiB/s, done.\n",
+            "Resolving deltas: 100% (217/217), done.\n",
+            "Cloning into '/content/gaussian-splatting/submodules/simple-knn'...\n",
+            "remote: Enumerating objects: 37, done.        \n",
+            "remote: Counting objects: 100% (37/37), done.        \n",
+            "remote: Compressing objects: 100% (34/34), done.        \n",
+            "remote: Total 37 (delta 18), reused 0 (delta 0), pack-reused 0 (from 0)        \n",
+            "Receiving objects: 100% (37/37), 9.41 KiB | 9.41 MiB/s, done.\n",
+            "Resolving deltas: 100% (18/18), done.\n",
+            "Submodule path 'SIBR_viewers': checked out '14199886ae3f42358092c16ada909c1e0b1cba20'\n",
+            "Submodule path 'submodules/diff-gaussian-rasterization': checked out '8064f52ca233942bdec2d1a1451c026deedd320b'\n",
+            "Submodule 'third_party/glm' (https://github.com/g-truc/glm.git) registered for path 'submodules/diff-gaussian-rasterization/third_party/glm'\n",
+            "Cloning into '/content/gaussian-splatting/submodules/diff-gaussian-rasterization/third_party/glm'...\n",
+            "remote: Enumerating objects: 59935, done.        \n",
+            "remote: Counting objects: 100% (144/144), done.        \n",
+            "remote: Compressing objects: 100% (69/69), done.        \n",
+            "remote: Total 59935 (delta 109), reused 75 (delta 75), pack-reused 59791 (from 4)        \n",
+            "Receiving objects: 100% (59935/59935), 71.39 MiB | 12.85 MiB/s, done.\n",
+            "Resolving deltas: 100% (45395/45395), done.\n",
+            "Submodule path 'submodules/diff-gaussian-rasterization/third_party/glm': checked out '5c46b9c07008ae65cb81ab79cd677ecc1934b903'\n",
+            "Submodule path 'submodules/simple-knn': checked out '44f764299fa305faf6ec5ebd99939e0508331503'\n",
+            "/content/gaussian-splatting\n",
+            "  Preparing metadata (setup.py) ... \u001b[?25l\u001b[?25hdone\n",
+            "  Building wheel for diff-gaussian-rasterization (setup.py) ... \u001b[?25l\u001b[?25hdone\n",
+            "  Preparing metadata (setup.py) ... \u001b[?25l\u001b[?25hdone\n",
+            "  Building wheel for simple-knn (setup.py) ... \u001b[?25l\u001b[?25hdone\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Mounting the drive"
+      ],
+      "metadata": {
+        "id": "_PAQza8u0MuW"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "images_folder_name=\"Images\"\n",
+        "\n",
+        "import os\n",
+        "import zipfile\n",
+        "from google.colab import drive\n",
+        "\n",
+        "# Mount Google Drive\n",
+        "drive.mount('/content/drive', force_remount=True)\n",
+        "# Paths\n",
+        "\n",
+        "\n"
+      ],
+      "metadata": {
+        "collapsed": true,
+        "id": "UKEfkE5gveh_",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "6bea4b9a-2751-4619-c67b-d59d46af75fa"
+      },
+      "execution_count": 10,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Mounted at /content/drive\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Choosing the file"
+      ],
+      "metadata": {
+        "id": "9tlyHC0C0e4N"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!unzip \"/content/drive/MyDrive/{images_zip_file_name}.zip\" -d \"/content/{images_zip_file_name}\"\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "GXTJtuvH0eCs",
+        "outputId": "66fff59d-f032-48af-a8f8-861e32ff7a7d"
+      },
+      "execution_count": 11,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Archive:  /content/drive/MyDrive/RAW_Images.zip\n",
+            "   creating: /content/RAW_Images/RAW_Images/\n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05572.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05573.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05574.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05575.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05576.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05577.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05578.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05579.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05580.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05581.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05582.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05583.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05584.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05585.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05586.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05587.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05588.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05589.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05590.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05591.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05592.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05593.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05594.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05595.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05596.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05597.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05598.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05599.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05600.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05601.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05602.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05603.jpg  \n",
+            "  inflating: /content/RAW_Images/RAW_Images/DSC05604.jpg  \n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "COLMAP Work with RAW images zip file"
+      ],
+      "metadata": {
+        "id": "M_TqgSqdzac5"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from pathlib import Path\n",
+        "import os\n",
+        "import subprocess\n",
+        "import pycolmap\n",
+        "\n",
+        "\n",
+        "\n",
+        "print(images_zip_file_name)\n",
+        "\n",
+        "# Define paths\n",
+        "output_path = Path(\"COLMAP_Output\")  # Base output directory\n",
+        "sparse_output_path = output_path / \"sparse\"  # Final sparse reconstruction directory\n",
+        "image_dir = Path(f\"/content/{images_zip_file_name}/{images_zip_file_name}\")  # Input images directory\n",
+        "initial_recon_path = output_path / \"initial\"  # Temporary directory for initial reconstruction\n",
+        "database_path = output_path / \"database.db\"\n",
+        "undistorted_output = output_path / \"undistorted\"\n",
+        "\n",
+        "# Create and verify directories\n",
+        "print(\"Creating directories...\")\n",
+        "output_path.mkdir(exist_ok=True)\n",
+        "sparse_output_path.mkdir(exist_ok=True)\n",
+        "initial_recon_path.mkdir(exist_ok=True)\n",
+        "print(f\"Checking directories:\")\n",
+        "print(f\" - {output_path}: {'exists' if output_path.exists() else 'not created'}\")\n",
+        "print(f\" - {sparse_output_path}: {'exists' if sparse_output_path.exists() else 'not created'}\")\n",
+        "print(f\" - {initial_recon_path}: {'exists' if initial_recon_path.exists() else 'not created'}\")\n",
+        "\n",
+        "# Verify image directory\n",
+        "print(f\"Image directory: {image_dir}\")\n",
+        "print(f\" - Exists: {image_dir.exists()}\")\n",
+        "print(f\" - Contents: {list(image_dir.glob('*'))}\")\n",
+        "\n",
+        "# Step 1: Initial SfM pipeline\n",
+        "print(\"Running initial feature extraction...\")\n",
+        "pycolmap.extract_features(database_path, image_dir)\n",
+        "print(f\"Database created: {database_path.exists()}\")\n",
+        "\n",
+        "print(\"Running initial feature matching...\")\n",
+        "pycolmap.match_exhaustive(database_path)\n",
+        "\n",
+        "print(\"Running initial incremental mapping...\")\n",
+        "maps = pycolmap.incremental_mapping(database_path, image_dir, initial_recon_path)\n",
+        "maps[0].write(initial_recon_path)\n",
+        "print(f\"Initial reconstruction contents: {list(initial_recon_path.glob('*'))}\")\n",
+        "\n",
+        "# Step 2: Undistort images\n",
+        "print(\"Running image undistortion...\")\n",
+        "subprocess.run([\n",
+        "    \"colmap\", \"image_undistorter\",\n",
+        "    \"--image_path\", str(image_dir),\n",
+        "    \"--input_path\", str(initial_recon_path),\n",
+        "    \"--output_path\", str(undistorted_output),\n",
+        "    \"--output_type\", \"COLMAP\",\n",
+        "    \"--max_image_size\", \"2000\"\n",
+        "], check=True)\n",
+        "print(f\"Undistorted directory contents: {list(undistorted_output.glob('*'))}\")\n",
+        "\n",
+        "# Update paths\n",
+        "undistorted_image_dir = undistorted_output / \"images\"\n",
+        "print(f\"Undistorted images directory: {undistorted_image_dir}\")\n",
+        "print(f\" - Contents: {list(undistorted_image_dir.glob('*'))}\")\n",
+        "\n",
+        "# Step 3: Re-run SfM on undistorted images\n",
+        "print(\"Extracting features from undistorted images...\")\n",
+        "pycolmap.extract_features(database_path, undistorted_image_dir)\n",
+        "\n",
+        "print(\"Matching features from undistorted images...\")\n",
+        "pycolmap.match_exhaustive(database_path)\n",
+        "\n",
+        "print(\"Running incremental mapping on undistorted images...\")\n",
+        "maps = pycolmap.incremental_mapping(database_path, undistorted_image_dir, sparse_output_path)\n",
+        "maps[0].write(sparse_output_path)\n",
+        "print(f\"Final sparse output contents: {list(sparse_output_path.glob('*'))}\")\n",
+        "\n",
+        "# Step 4: Verify camera models\n",
+        "print(\"Verifying camera models in the output...\")\n",
+        "reconstruction = pycolmap.Reconstruction(f\"{output_path}/undistorted/sparse\") # Load the reconstruction\n",
+        "for cam_id, cam in reconstruction.cameras.items(): # Iterate through the cameras\n",
+        "    print(cam)\n",
+        "\n",
+        "\n",
+        "print(\"COLMAP processing completed.\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "j7bgsO3mzZNr",
+        "outputId": "2cd084f2-c635-46ac-c876-89f32f663adf"
+      },
+      "execution_count": 27,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "RAW_Images\n",
+            "Creating directories...\n",
+            "Checking directories:\n",
+            " - COLMAP_Output: exists\n",
+            " - COLMAP_Output/sparse: exists\n",
+            " - COLMAP_Output/initial: exists\n",
+            "Image directory: /content/RAW_Images/RAW_Images\n",
+            " - Exists: True\n",
+            " - Contents: [PosixPath('/content/RAW_Images/RAW_Images/DSC05578.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05573.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05602.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05580.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05579.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05581.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05584.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05572.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05596.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05595.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05592.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05588.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05603.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05583.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05589.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05599.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05574.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05587.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05591.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05576.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05600.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05575.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05593.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05577.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05586.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05598.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05582.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05594.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05601.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05604.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05590.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05585.jpg'), PosixPath('/content/RAW_Images/RAW_Images/DSC05597.jpg')]\n",
+            "Running initial feature extraction...\n",
+            "Database created: True\n",
+            "Running initial feature matching...\n",
+            "Running initial incremental mapping...\n",
+            "Initial reconstruction contents: [PosixPath('COLMAP_Output/initial/1'), PosixPath('COLMAP_Output/initial/0'), PosixPath('COLMAP_Output/initial/points3D.bin'), PosixPath('COLMAP_Output/initial/images.bin'), PosixPath('COLMAP_Output/initial/cameras.bin')]\n",
+            "Running image undistortion...\n",
+            "Undistorted directory contents: [PosixPath('COLMAP_Output/undistorted/images'), PosixPath('COLMAP_Output/undistorted/sparse'), PosixPath('COLMAP_Output/undistorted/stereo'), PosixPath('COLMAP_Output/undistorted/run-colmap-photometric.sh'), PosixPath('COLMAP_Output/undistorted/run-colmap-geometric.sh')]\n",
+            "Undistorted images directory: COLMAP_Output/undistorted/images\n",
+            " - Contents: [PosixPath('COLMAP_Output/undistorted/images/DSC05578.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05573.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05602.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05580.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05579.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05581.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05584.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05572.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05596.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05595.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05592.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05588.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05583.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05589.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05599.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05574.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05587.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05591.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05576.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05600.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05575.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05593.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05577.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05586.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05598.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05582.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05594.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05601.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05590.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05585.jpg'), PosixPath('COLMAP_Output/undistorted/images/DSC05597.jpg')]\n",
+            "Extracting features from undistorted images...\n",
+            "Matching features from undistorted images...\n",
+            "Running incremental mapping on undistorted images...\n",
+            "Final sparse output contents: [PosixPath('COLMAP_Output/sparse/1'), PosixPath('COLMAP_Output/sparse/0'), PosixPath('COLMAP_Output/sparse/points3D.bin'), PosixPath('COLMAP_Output/sparse/images.bin'), PosixPath('COLMAP_Output/sparse/cameras.bin')]\n",
+            "Verifying camera models in the output...\n",
+            "Camera(camera_id=10, model=PINHOLE, width=1274, height=834, params=[1313.11, 1313.11, 637, 417] (fx, fy, cx, cy))\n",
+            "Camera(camera_id=11, model=PINHOLE, width=1165, height=766, params=[1218.95, 1218.95, 582.5, 383] (fx, fy, cx, cy))\n",
+            "Camera(camera_id=15, model=PINHOLE, width=1064, height=700, params=[926.491, 926.491, 532, 350] (fx, fy, cx, cy))\n",
+            "Camera(camera_id=16, model=PINHOLE, width=1316, height=845, params=[1658.62, 1658.62, 658, 422.5] (fx, fy, cx, cy))\n",
+            "COLMAP processing completed.\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "print(output_path)"
+      ],
+      "metadata": {
+        "id": "ICF-PQqOyosx",
+        "outputId": "f556e7b2-cc79-4c9b-9875-6e912b91cdcf",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        }
+      },
+      "execution_count": 13,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "COLMAP_Output\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Arranging Input folder for the 3D Gaussian INRIA"
+      ],
+      "metadata": {
+        "id": "YoZ2qmI7EoEy"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import os\n",
+        "import shutil\n",
+        "from pathlib import Path\n",
+        "\n",
+        "# Define paths (adjust these to your actual paths)\n",
+        "\n",
+        "print(output_path)\n",
+        "\n",
+        "\n",
+        "input_images_folder = f\"/content/{output_path}/undistorted/images/\" # Folder with your input images\n",
+        "colmap_output_folder =  f\"/content/{output_path}/undistorted/sparse/\"   # Folder containing COLMAP's output (e.g., \"sparse\" files)\n",
+        "new_parent_folder = \"3D_Gaussian_Splatting_input_folder2\"  # New folder to create\n",
+        "\n",
+        "# Create the new parent folder\n",
+        "new_parent = Path(new_parent_folder)\n",
+        "new_parent.mkdir(parents=True, exist_ok=True)\n",
+        "\n",
+        "# 1. Copy input images to \"images\" subfolder\n",
+        "images_subfolder = new_parent / \"images\"\n",
+        "images_subfolder.mkdir(exist_ok=True)\n",
+        "\n",
+        "# Copy all images from input_images_folder to images_subfolder\n",
+        "for img in Path(input_images_folder).glob(\"*\"):\n",
+        "    if img.is_file() and img.suffix.lower() in [\".jpg\", \".jpeg\", \".png\"]:\n",
+        "        shutil.copy(img, images_subfolder / img.name)\n",
+        "\n",
+        "# 2. Create \"sparse\" subfolder and copy COLMAP output files\n",
+        "sparse_subfolder = new_parent / \"sparse/0/\"\n",
+        "# Create the parent directory 'sparse' first\n",
+        "sparse_subfolder.parent.mkdir(parents=True, exist_ok=True)\n",
+        "# Now create the '0' subfolder\n",
+        "sparse_subfolder.mkdir(exist_ok=True)\n",
+        "\n",
+        "\n",
+        "# Copy COLMAP reconstruction files (cameras.bin, images.bin, points3D.bin)\n",
+        "required_colmap_files = [\"cameras.bin\", \"images.bin\", \"points3D.bin\"]\n",
+        "for file in required_colmap_files:\n",
+        "    src = Path(colmap_output_folder) / file\n",
+        "    if src.exists():\n",
+        "        shutil.copy(src, sparse_subfolder / file)\n",
+        "    else:\n",
+        "        print(f\"Warning: {file} not found in COLMAP output folder!\")\n",
+        "\n",
+        "print(f\"Dataset folder created at: {new_parent_folder}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "V7xfN1kUE2wL",
+        "outputId": "2095032a-a867-445e-fa10-51b0167f53f5"
+      },
+      "execution_count": 29,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "COLMAP_Output\n",
+            "Warning: cameras.bin not found in COLMAP output folder!\n",
+            "Warning: images.bin not found in COLMAP output folder!\n",
+            "Warning: points3D.bin not found in COLMAP output folder!\n",
+            "Dataset folder created at: 3D_Gaussian_Splatting_input_folder2\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Training the model"
+      ],
+      "metadata": {
+        "id": "Sj3v4XD1ozVq"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "!python /content/gaussian-splatting/train.py \\\n",
+        "  -s /content/3D_Gaussian_Splatting_input_folder2// \\\n",
+        "  -m /content/output \\\n",
+        "  --iterations 30000 \\\n",
+        "  --test_iterations 1000 2000 3000 4000 5000 \\\n",
+        "  --save_iterations 1000 2000 3000 4000 5000\n"
+      ],
+      "metadata": {
+        "id": "g1iJBEXGoykG",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "outputId": "cc7e247e-5dd2-4cce-c4f4-0c22c3cbf6f5"
+      },
+      "execution_count": 26,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Optimizing /content/output\n",
+            "Output folder: /content/output [06/03 01:05:08]\n",
+            "Tensorboard not available: not logging progress [06/03 01:05:08]\n",
+            "Traceback (most recent call last):\n",
+            "  File \"/content/gaussian-splatting/train.py\", line 216, in <module>\n",
+            "    training(lp.extract(args), op.extract(args), pp.extract(args), args.test_iterations, args.save_iterations, args.checkpoint_iterations, args.start_checkpoint, args.debug_from)\n",
+            "  File \"/content/gaussian-splatting/train.py\", line 35, in training\n",
+            "    scene = Scene(dataset, gaussians)\n",
+            "  File \"/content/gaussian-splatting/scene/__init__.py\", line 49, in __init__\n",
+            "    assert False, \"Could not recognize scene type!\"\n",
+            "AssertionError: Could not recognize scene type!\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
